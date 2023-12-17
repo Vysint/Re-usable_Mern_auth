@@ -1,25 +1,26 @@
 import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
-import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
-
-import { toast } from "react-toastify";
-import Card from "../../components/card/Card";
-import { useLoginMutation } from "../../features/slices/usersApiSlice";
-import { SpinnerImg } from "../../components/loader/Loader";
 import { setCredentials } from "../../features/slices/authSlice";
-import "./Login.css";
+import Logo from "/src/assets/LoginLogo.png";
+import AppLoader from "../../utils/AppLoader";
+import { validateEmail } from "../../utils/validateEmail";
+import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
+import { useLoginMutation } from "../../features/slices/usersApiSlice";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const [visible, setVisible] = useState(false);
 
+  const [login, { isLoading }] = useLoginMutation();
+
   const dispatch = useDispatch();
-  const { userInfo } = useSelector((state) => state.auth);
   const navigate = useNavigate();
 
-  const [login, { isLoading }] = useLoginMutation();
+  const { userInfo } = useSelector((state) => state.auth);
 
   useEffect(() => {
     if (userInfo) {
@@ -29,11 +30,16 @@ const Login = () => {
 
   const submitHandler = async (e) => {
     e.preventDefault();
+    if (!email || !password) {
+      return toast.error("All fields are required");
+    }
+    if (!validateEmail(email)) {
+      return toast.error("Please enter a valid email");
+    }
 
     try {
       const res = await login({ email, password }).unwrap();
       dispatch(setCredentials({ ...res }));
-      toast.success("Login successful");
       navigate("/");
     } catch (err) {
       toast.error(err?.data?.message || err.error?.message);
@@ -41,68 +47,101 @@ const Login = () => {
   };
 
   return (
-    <div className="auth">
-      {isLoading && <SpinnerImg />}
-      <Card>
-        <div className="form">
-          <h2 className="title">Login</h2>
-          <form className="form1" onSubmit={submitHandler}>
-            <div className="inputs">
-              <label>Email Address</label>
+    <div className="flex h-screen bg-white">
+      {/* Left side */}
+      <div className="hidden sm:flex w-1/2 bg-[#FF9549] justify-center items-center">
+        <div className="text-center">
+          <img src={Logo} alt="logo" />
+        </div>
+      </div>
+
+      {/* Right side */}
+      <div className="w-full sm:w-1/2 flex justify-center items-center">
+        <div className="sm:w-96 p-5">
+          <div className="text-center">
+            <h2 className="font-fira text-medium text-4xl text-[var(--secondary)]">
+              Welcome Again
+            </h2>
+            <h2 className="mt-3 mb-10 text-[var(--secondary)]">
+              Connect with talented chefs
+            </h2>
+          </div>
+          <form onSubmit={submitHandler}>
+            <label
+              htmlFor="email"
+              className="text-[14px] font-inter text-[var(--tertiary)]"
+            >
+              Email Address
+            </label>
+            <input
+              type="email"
+              id="email"
+              value={email}
+              name="email"
+              onChange={(e) => {
+                setEmail(e.target.value);
+              }}
+              placeholder="Email"
+              required
+              className="w-full rounded-lg placeholder-[var(--primary)] mb-5 border border-[#94a3b8] px-[12px] py-[8px]"
+            />
+            <label
+              htmlFor="password"
+              className="text-[14px] font-inter text-[var(--tertiary)] mt-10"
+            >
+              Password
+            </label>
+            <div style={{ position: "relative" }}>
               <input
-                type="email"
-                placeholder="Email"
-                name="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type={visible ? "text" : "password"}
+                id="password"
+                value={password}
+                name="password"
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                }}
+                placeholder="Password"
                 required
+                className="w-full rounded-lg placeholder-[var(--primary)] border border-[#94a3b8] px-[12px] py-[8px] pr-[40px]"
               />
+              <span
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  right: "10px",
+                  transform: "translateY(-50%)",
+                  cursor: "pointer",
+                }}
+                onClick={() => setVisible(!visible)}
+              >
+                {visible ? (
+                  <AiOutlineEye size={25} />
+                ) : (
+                  <AiOutlineEyeInvisible size={25} />
+                )}
+              </span>
             </div>
-            <div className="inputs">
-              <label>Password</label>
-              <div className="passwordInput">
-                <input
-                  type={visible ? "text" : "password"}
-                  placeholder="Password"
-                  name="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                <span className="eye" onClick={() => setVisible(!visible)}>
-                  {visible ? (
-                    <AiOutlineEye size={25} />
-                  ) : (
-                    <AiOutlineEyeInvisible size={25} />
-                  )}
-                </span>
-              </div>
-            </div>
-            <div className="options">
-              <div className="checkbox">
-                <input type="checkbox" name="remember" id="remember" />
-                <label htmlFor="remember">Remember me</label>
-              </div>
-              <Link to="/forgotpassword" className="register">
-                Forgot Password
-              </Link>
-            </div>
+
+            <p className="text-sm text-[var(--primary)] text-right mt-3">
+              <Link to="/forgotpassword">Forgot Password</Link>
+            </p>
             <button
               type="submit"
-              className="--btn --btn-primary --btn-block"
-              style={{ marginBottom: "1rem" }}
+              className="bg-[var(--primary)] text-white rounded-lg py-2 px-4 w-full mt-12"
+              disabled={isLoading}
             >
-              Submit
+              {isLoading ? <AppLoader /> : "Sign In"}
             </button>
           </form>
-          <div style={{ marginBottom: "1rem" }}>
-            <span>Don&apos;t have an account?</span>
-            <Link to="/register" className="register">
-              &nbsp;SignUp
+
+          <p className="font-medium text-sm text-center mt-5 text-[var(--tertiary-dark)]">
+            Already have an account?{" "}
+            <Link to="/register" className="text-[var(--primary)]">
+              Sign Up
             </Link>
-          </div>
+          </p>
         </div>
-      </Card>
+      </div>
     </div>
   );
 };

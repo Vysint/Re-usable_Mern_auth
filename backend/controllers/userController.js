@@ -10,11 +10,11 @@ const sendMail = require("../utils/sendMail");
 // route   POST /api/v2/users/register
 // @access Public
 exports.registerUser = async (req, res, next) => {
-  const { name, email, password, imageURL } = req.body;
+  const { name, email, password } = req.body;
 
   // Validation
   try {
-    if (!name || !email || !password || !imageURL) {
+    if (!name || !email || !password) {
       res.status(400);
       throw new Error("Please fill in all the required fields");
     }
@@ -50,7 +50,6 @@ exports.registerUser = async (req, res, next) => {
       name,
       email,
       password,
-      imageURL,
     });
     if (newUser) {
       verifyToken(res, newUser._id);
@@ -190,7 +189,10 @@ exports.forgotPassword = async (req, res, next) => {
 
       try {
         await sendMail(subject, message, send_to, sent_from);
-        res.status(200).json({ success: true, message: "Reset email sent, kindly check your email" });
+        res.status(200).json({
+          success: true,
+          message: "Reset email sent, kindly check your email",
+        });
       } catch (err) {
         res.status(400);
         throw new Error("Email not sent,please try again");

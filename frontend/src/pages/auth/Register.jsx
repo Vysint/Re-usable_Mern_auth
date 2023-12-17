@@ -1,173 +1,243 @@
-import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
-import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
-import { RxAvatar } from "react-icons/rx";
 import { useSignUpMutation } from "../../features/slices/usersApiSlice";
 import { setCredentials } from "../../features/slices/authSlice";
-import Card from "../../components/card/Card";
-import { SpinnerImg } from "../../components/loader/Loader";
-import "./Login.css";
+import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
+import Logo from "/src/assets/LoginLogo.png";
+import AppLoader from "../../utils/AppLoader";
+import { AppError } from "../../utils/AppError";
 
-const Login = () => {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+const initialState = {
+  name: "",
+  email: "",
+  password: "",
+  password2: "",
+};
+const SignUpOne = () => {
+  const [userData, setUserData] = useState(initialState);
+  const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(false);
-  const [profileImage, setProfileImage] = useState(null);
 
   const dispatch = useDispatch();
-  const { userInfo } = useSelector((state) => state.auth);
   const navigate = useNavigate();
 
   const [signUp, { isLoading }] = useSignUpMutation();
 
-  useEffect(() => {
-    if (userInfo) {
-      navigate("/");
-    }
-  }, [navigate, userInfo]);
+  //  Handle input
+  const handleInputChange = (e) => {
+    setUserData((userData) => ({
+      ...userData,
+      [e.target.name]: e.target.value,
+    }));
+  };
 
-  const handleImageChange = (e) => {
-    setProfileImage(e.target.files[0]);
+  const handleHomeNavigation = () => {
+    navigate("/");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!userData.name || !userData.email || !userData.password) {
+      return toast.error("All fields are required");
+    }
+    if (userData.password.length < 6) {
+      return toast.error("Password must be up to 6 characters");
+    }
+    if (userData.password !== userData.password2) {
+      return toast.error("Passwords do not match");
+    }
+
+    const userInfo = {
+      name: userData.name,
+      email: userData.email,
+      password: userData.password,
+    };
+    setLoading(true);
+
     try {
-      // Handle image upload
-      let imageURL;
-      if (
-        profileImage &&
-        (profileImage.type === "image/jpeg" ||
-          profileImage.type === "image/jpg" ||
-          profileImage.type === "image/png")
-      ) {
-        const image = new FormData();
-        image.append("file", profileImage);
-        image.append("cloud_name", "dk7mw2ypf");
-        image.append("upload_preset", "aqoxs4ms");
-
-        // Save image to cloudinary
-        const response = await fetch(
-          "https://api.cloudinary.com/v1_1/dk7mw2ypf/image/upload",
-          {
-            method: "POST",
-            body: image,
-          }
-        );
-        const imgData = await response.json();
-        imageURL = imgData.secure_url;
-      }
-
-      // Save the user
-      const formData = {
-        name,
-        email,
-        password,
-        imageURL,
-      };
-      const res = await signUp(formData).unwrap();
+      const res = await signUp(userInfo).unwrap();
       dispatch(setCredentials({ ...res }));
       navigate("/");
-      toast.success("Sign up is successful");
+      toast.success("Signup is successful");
     } catch (err) {
-      toast.error(err?.data?.message || err?.error?.message);
+      setLoading(false);
+      toast.error(err?.data?.message || err.error?.message);
     }
   };
-
   return (
-    <div className="auth">
-      {isLoading && <SpinnerImg />}
-      <Card>
-        <div className="form">
-          <h2 className="title">Register</h2>
-          <form className="form1" onSubmit={handleSubmit}>
-            <div className="inputs">
-              <label> Full Name</label>
-              <input
-                type="text"
-                placeholder="Name"
-                name="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
-            <div className="inputs">
-              <label>Email Address</label>
-              <input
-                type="email"
-                placeholder="Email"
-                name="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="inputs">
-              <label>Password</label>
-              <div className="passwordInput">
-                <input
-                  type={visible ? "text" : "password"}
-                  placeholder="Password"
-                  name="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                <span className="eye" onClick={() => setVisible(!visible)}>
-                  {visible ? (
-                    <AiOutlineEye size={25} />
-                  ) : (
-                    <AiOutlineEyeInvisible size={25} />
-                  )}
-                </span>
-              </div>
-            </div>
-            <div className="option">
-              <label htmlFor="file-input"></label>
-              <div className="items-center">
-                <span className="inline">
-                  {profileImage ? (
-                    <img src={URL.createObjectURL(profileImage)} />
-                  ) : (
-                    <RxAvatar size={25} />
-                  )}
-                </span>
-                <label htmlFor="file-input">
-                  <div className="file-upload">
-                    <input
-                      type="file"
-                      name="avatar"
-                      id="file-input"
-                      onChange={handleImageChange}
-                      className="sr-only"
-                    />
-                    <button>Upload a file</button>
-                  </div>
-                </label>
-              </div>
-            </div>
-            <button
-              type="submit"
-              className="--btn --btn-primary --btn-block"
-              style={{ marginBottom: "1rem" }}
-            >
-              Submit
-            </button>
-          </form>
-          <div style={{ marginBottom: "1rem" }}>
-            <span>Already have an account?</span>
-            <Link to="/login" className="register">
-              &nbsp;Sign In
-            </Link>
+    <div className="flex w-full bg-white">
+      {/* left side */}
+      <div className="hidden sm:flex bg-[#FF9549] justify-center items-center flex-1 w-full">
+        <div className="text-center">
+          <img src={Logo} alt="logo" />
+        </div>
+      </div>
+
+      <div className="flex flex-col h-[100vh] justify-between w-full flex-1">
+        <div className="flex justify-end p-4">
+          <div
+            className="text-[#2A6476] cursor-pointer"
+            onClick={handleHomeNavigation}
+          >
+            Exit
           </div>
         </div>
-      </Card>
+
+        <div className="justify-center flex gap-2 flex-col text-center items-center">
+          <p className="font-fira text-medium text-4xl text-[var(--secondary)]">
+            Create Account
+          </p>
+          <p className=" text-[#3F3F3F] mb-2">Connect with talented chefs</p>
+        </div>
+
+        {<AppError />}
+
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-4 items-center justify-center"
+        >
+          <div>
+            <p className="text-[#2A6476] font-inter mb-[4px]">Full Name</p>
+            <input
+              type="text"
+              name="name"
+              value={userData.name}
+              onChange={handleInputChange}
+              className="w-[312px] text-[#A6A6A6] placeholder-[#A6A6A6] border border-[#A6A6A6] focus:outline-none h-[41px]"
+              style={{
+                borderRadius: "8px",
+                paddingLeft: "8px",
+              }}
+              placeholder="Name"
+              required
+            />
+          </div>
+
+          <div>
+            <p className="text-[#2A6476] font-inter mb-[4px]">Email Address</p>
+            <input
+              type="email"
+              name="email"
+              value={userData.email}
+              onChange={handleInputChange}
+              className="w-[312px] text-black placeholder-[#A6A6A6] border border-[#A6A6A6] focus:outline-none h-[41px]"
+              style={{
+                borderRadius: "8px",
+                paddingLeft: "8px",
+              }}
+              placeholder="Enter Your Email"
+              required
+            />
+          </div>
+
+          <div>
+            <p className="text-[#2A6476] font-inter mb-[4px]">
+              Set a new password
+            </p>
+            <div style={{ position: "relative" }}>
+              <input
+                type={visible ? "text" : "password"}
+                name="password"
+                value={userData.password}
+                className="w-[312px] text-black placeholder-[#A6A6A6] border border-[#A6A6A6] focus:outline-none h-[41px] relative pl-[40px] pr-[30px]"
+                onChange={handleInputChange}
+                style={{
+                  borderRadius: "8px",
+                  paddingLeft: "8px",
+                }}
+                placeholder="Password"
+                required
+              />
+              <span
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  right: "10px",
+                  transform: "translateY(-50%)",
+                  cursor: "pointer",
+                }}
+                onClick={() => setVisible(!visible)}
+              >
+                {visible ? (
+                  <AiOutlineEye size={25} />
+                ) : (
+                  <AiOutlineEyeInvisible size={25} />
+                )}
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-[#2A6476] font-inter mb-[4px]">
+              Confirm password
+            </p>
+            <div style={{ position: "relative" }}>
+              <input
+                type={visible ? "text" : "password"}
+                name="password2"
+                value={userData.password2}
+                className="w-[312px] text-black placeholder-[#A6A6A6] border border-[#A6A6A6] focus:outline-none h-[41px] relative pl-[40px] pr-[30px]"
+                onChange={handleInputChange}
+                style={{
+                  borderRadius: "8px",
+                  paddingLeft: "8px",
+                }}
+                placeholder="Confirm Password"
+                required
+              />
+              <span
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  right: "10px",
+                  transform: "translateY(-50%)",
+                  cursor: "pointer",
+                }}
+                onClick={() => setVisible(!visible)}
+              >
+                {visible ? (
+                  <AiOutlineEye size={25} />
+                ) : (
+                  <AiOutlineEyeInvisible size={25} />
+                )}
+              </span>
+            </div>
+          </div>
+
+          <div className="justify-center pb-12 flex gap-4 flex-col text-center items-center">
+            <button
+              className="w-[312px] h-[41px] text-white bg-[#2A6476]"
+              style={{
+                borderRadius: "8px",
+              }}
+              type="submit"
+            >
+              {isLoading && loading ? <AppLoader /> : "Sign Up"}
+            </button>
+          </div>
+        </form>
+        <p className=" text-center  mx-auto w-[305px] ">
+          By continuing you accept our standard
+          <span className="underline px-2 text-[var(--primary)]">
+            terms and conditions
+          </span>
+          and our{" "}
+          <span className=" px-2 underline text-[var(--primary)]">
+            privacy policy.
+          </span>
+        </p>
+        <p className="text-center flex justify-center pb-12 ">
+          Already have an account?&nbsp;
+          <Link to="/login" className="text-[var(--primary)]">
+            Sign In
+          </Link>
+        </p>
+      </div>
     </div>
   );
 };
 
-export default Login;
+export default SignUpOne;
